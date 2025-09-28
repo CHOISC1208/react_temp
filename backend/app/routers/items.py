@@ -11,7 +11,11 @@ router = APIRouter(prefix="/items", tags=["items"])
 
 
 @router.post("", response_model=ItemRead, status_code=status.HTTP_201_CREATED)
-def create_item(item_in: ItemCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db_session)) -> ItemRead:
+def create_item(
+    item_in: ItemCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> ItemRead:
     item = Item(name=item_in.name, owner_id=current_user.id)
     db.add(item)
     db.commit()
@@ -38,7 +42,11 @@ def _get_owned_item(db: Session, item_id: uuid.UUID, user: User) -> Item:
 
 
 @router.get("/{item_id}", response_model=ItemRead)
-def get_item(item_id: uuid.UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db_session)) -> ItemRead:
+def get_item(
+    item_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> ItemRead:
     item = _get_owned_item(db, item_id, current_user)
     return ItemRead.model_validate(item)
 
@@ -59,7 +67,11 @@ def update_item(
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_item(item_id: uuid.UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db_session)) -> None:
+def delete_item(
+    item_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> None:
     item = _get_owned_item(db, item_id, current_user)
     db.delete(item)
     db.commit()

@@ -39,7 +39,19 @@ The seed script provisions an admin user (`admin@example.com` / `adminpass`) and
 
 Stop the stack with `make down`. Tail logs with `make logs`.
 
-## 3. API Overview
+## 3. Environment Variables
+
+Three `.env.example` files live at the repository root, `backend/`, and `frontend/`. Copy them to `.env` counterparts and adjust as needed:
+
+| Location | Key settings |
+| --- | --- |
+| `/.env` | `DATABASE_URL`, `DB_SCHEMA`, `BACKEND_PORT`, `FRONTEND_PORT`, `ALLOWED_ORIGINS`, `VITE_API_BASE_URL` |
+| `backend/.env` | Same as root minus frontend keys. Used by Docker/Procfile for the API service. |
+| `frontend/.env` | `VITE_API_BASE_URL` pointing at the FastAPI base URL. |
+
+`DB_SCHEMA` defaults to `public`, but the migration runner will automatically create the schema and set the PostgreSQL search path before applying SQL files. When deploying to Heroku, rely on the managed `DATABASE_URL` config var and only override `DB_SCHEMA` when you intentionally separate schemas.
+
+## 4. API Overview
 
 - `POST /auth/login` → obtain JWT access token
 - `GET /auth/me` → current authenticated user
@@ -49,7 +61,7 @@ Stop the stack with `make down`. Tail logs with `make logs`.
 
 OpenAPI docs are available at `http://localhost:8000/docs`.
 
-## 4. Database Migrations
+## 5. Database Migrations
 
 Migrations live in `backend/migrations/*.sql`. Each file **must be idempotent**.
 
@@ -59,7 +71,7 @@ Migrations live in `backend/migrations/*.sql`. Each file **must be idempotent**.
 
 `backend/scripts/migrate.py` executes SQL files in lexicographical order and records execution in `_schema_migrations`.
 
-## 5. Seeding
+## 6. Seeding
 
 `backend/scripts/seed.py` inserts the default admin user and can be run safely multiple times:
 
@@ -67,14 +79,14 @@ Migrations live in `backend/migrations/*.sql`. Each file **must be idempotent**.
 python backend/scripts/seed.py
 ```
 
-## 6. Testing
+## 7. Testing
 
 - Backend: `pytest -q`
 - Frontend: `npm --prefix frontend test`
 
 CI workflow (`.github/workflows/ci.yml`) runs migrations twice, executes backend pytest, and runs frontend vitest.
 
-## 7. Deployment (Heroku)
+## 8. Deployment (Heroku)
 
 1. Provision a Heroku app with the PostgreSQL add-on (`DATABASE_URL` is provided automatically).
 2. Configure Config Vars: `JWT_SECRET`, `ALLOWED_ORIGINS`, `ENV=production`.
@@ -82,7 +94,7 @@ CI workflow (`.github/workflows/ci.yml`) runs migrations twice, executes backend
    - `web`: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
    - `release`: runs migrations and seed script automatically.
 
-## 8. Project Scripts
+## 9. Project Scripts
 
 `Makefile` highlights:
 
@@ -92,14 +104,14 @@ CI workflow (`.github/workflows/ci.yml`) runs migrations twice, executes backend
 - `make fmt` / `make lint`
 - `make new-migration m="description"`
 
-## 9. Frontend Notes
+## 10. Frontend Notes
 
 - Auth-aware layout with login, dashboard, items, and users pages
 - React Query handles API caching; errors trigger `sonner` toasts
 - Protected routes gate pages behind JWT session state
 - Tailwind + shadcn-styled UI primitives live in `frontend/src/components/ui`
 
-## 10. Backend Notes
+## 11. Backend Notes
 
 - FastAPI application lives in `backend/app`
 - SQLAlchemy models (`User`, `Item`) back JWT auth & RBAC
