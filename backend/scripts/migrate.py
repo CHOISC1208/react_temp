@@ -1,12 +1,26 @@
-import glob
 import os
 from pathlib import Path
 
 import psycopg
+from psycopg import sql
+from dotenv import load_dotenv
+
+ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(ROOT / ".env")
+load_dotenv(ROOT / "backend" / ".env")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is required")
+
+DB_SCHEMA = os.environ.get("DB_SCHEMA") or "public"
+
+
+def normalize_dsn(url: str) -> str:
+    lowered = url.lower()
+    if lowered.startswith("postgresql+psycopg://"):
+        return "postgresql://" + url.split("://", 1)[1]
+    return url
 
 DDL_MIGRATIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS _schema_migrations (
@@ -28,16 +42,18 @@ def applied_set(cur: psycopg.Cursor) -> set[str]:
 
 def apply_sql(cur: psycopg.Cursor, path: Path) -> None:
     with path.open("r", encoding="utf-8") as file:
-        sql = file.read()
-    if not sql.strip():
+        statements = file.read()
+    if not statements.strip():
         return
-    cur.execute(sql)
+    cur.execute(statements)
 
 
 def main() -> None:
     migrations_dir = Path(__file__).resolve().parent.parent / "migrations"
-    with psycopg.connect(DATABASE_URL) as conn:
+    with psycopg.connect(normalize_dsn(DATABASE_URL)) as conn:
         with conn.cursor() as cur:
+            cur.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(DB_SCHEMA)))
+            cur.execute(sql.SQL("SET search_path TO {}").format(sql.Identifier(DB_SCHEMA)))
             ensure_table(cur)
             completed = applied_set(cur)
 
